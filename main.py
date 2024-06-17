@@ -11,11 +11,15 @@ USERNAME = "*********"
 PASSWORD = "*********"
 SECOND_PLAYER = "NAN CHEN"
 
+TIMESLOT = "16:00:00"
+# priority for [court1, court2, court3, court4]
+# 0 is highest priority
+PRIORITY = [3, 2, 1, 0]
+
 # Not in use, TBD
 # priority for [6to7, 7to8, 8to9] sessions
 PRIORITY = [2, 0, 1]
-# priority for [court1, court2, court3, court4]
-PRIORITY = [3, 2, 1, 0]
+
 
 COURT_RESERVE_PAGE = "https://app.courtreserve.com/Online/Account/Login"
 
@@ -41,7 +45,7 @@ def book_a_court(browser):
     while prev_date != cur_date and not found_date:
         next_day_button = browser.find_element(By.XPATH,"//button[@title='Next']")
         sleep(1)
-        reserve_8to9 = browser.find_elements(By.XPATH,'//button[(contains(@start, "20:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
+        reserve_8to9 = browser.find_elements(By.XPATH,'//button[(contains(@start, "%s")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]'%str(TIMESLOT))
         #reserve_8to9 = WebDriverWait(browser, 20).until(EC.element_to_be_clickable((By.XPATH, '//button[(contains(@start, "20:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')))
 
         if len(reserve_8to9) <= 0:
@@ -73,27 +77,41 @@ def book_a_court_at_certain_date(browser, date):
     # find time slot
     #reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "18:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
     #reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "19:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
-    reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "12:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
+    reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "%s")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]'%str(TIMESLOT))
 
     if len(reserve)==0:
         print("No availiability")
         return
 
     if len(reserve) > 0:
-        Court_Label = ["Court 1", "Court 2", "Court 3", "Court 4"]
-        available_courts = []
+        Court_Labels = ["Court 1", "Court 2", "Court 3", "Court 4"]
+        #Priority_lane = [PRIORITY.index(0), PRIORITY.index(1), PRIORITY.index(2), PRIORITY.index(3)]
+        priority_lane = []
         for available_slot in reserve:
             court_label = available_slot.get_attribute("courtlabel")
-            available_courts.append(court_label)
+            priority_lane.append(PRIORITY[Court_Labels.index(court_label)])
         
-        # reserve court
-        reserve[0].click()
-        sleep(1)
-        extra_player = browser.find_element(By.XPATH, '//input[@name="OwnersDropdown_input"]')
-        extra_player.send_keys(SECOND_PLAYER)
-        save_button = browser.find_element(By.XPATH, '//button[text()="Save"]')
+        reserve_order = []
+        for i in range(len(priority_lane)):
+            # reserve order should be
+            minimum = min(priority_lane)
+            reserve_order.append(priority_lane.index(minimum))
+            priority_lane.remove(minimum)
 
-        #save_button.click()
+        booked = False
+        i = 0
+        while i < len(reserve) and not booked:
+            # reserve court
+            court_number = reserve_order[i]
+            reserve[court_number].click()
+            sleep(1)
+            extra_player = browser.find_element(By.XPATH, '//input[@name="OwnersDropdown_input"]')
+            extra_player.send_keys(SECOND_PLAYER)
+            save_button = browser.find_element(By.XPATH, '//button[text()="Save"]')
+            #save_button.click()
+            booked = True
+            print("Booked Timeslot at " + reserve[court_number].get_attribute("start") + " on "+ reserve[court_number].get_attribute("courtlabel"))
+            i+=1
 
 
 def format_date(target_date):
