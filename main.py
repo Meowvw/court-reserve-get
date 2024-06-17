@@ -6,8 +6,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from time import sleep
 
-USERNAME = "scw.lj330@gmail.com"
-PASSWORD = "wbttzy52chen"
+## Update USERNAME and PASSWORD to login
+USERNAME = "*********"
+PASSWORD = "*********"
+SECOND_PLAYER = "NAN CHEN"
+
+# Not in use, TBD
 # priority for [6to7, 7to8, 8to9] sessions
 PRIORITY = [2, 0, 1]
 # priority for [court1, court2, court3, court4]
@@ -24,6 +28,7 @@ def login(browser):
     login = browser.find_element(By.CSS_SELECTOR,'button[type="button"]')
     login.click()
 
+# not in use, this is for getting any available slot
 def book_a_court(browser):
     browser.maximize_window()
     #lnks=browser.find_elements(By.XPATH, "(//a[contains(@href,'/Reservations/Bookings')])")
@@ -51,27 +56,6 @@ def book_a_court(browser):
         print("Date Found ", cur_date)
     else:
         print("No Availiability")
-        #allentry = driver.find_elements(By.XPATH, "//div[contains(@class,'dw-cal-day')]")
-#for date in allentry:
-#
-#    date_id = date.get_attribute('aria-label')
-#    
-#    #ignore those dates which are not selectable
-#    if date.get_attribute('aria-disabled') == 'true' or date_id is None or date_id in list_entry:
-#        pass
-#    else:
-#        list_entry += [date_id]                
-#
-#driver.refresh()
-#        import pdb
-#        pdb.set_trace()
-#        reserve_8to9[0].click() 
-
-
-    #browser.quit()
-    #hover.perform()
-
-    #element = browser.find_element(By.XPATH, "//a[contains(@href, '/Online/Reservation/Bookings')]")
 
 def book_a_court_at_certain_date(browser, date):
     browser.maximize_window()
@@ -81,24 +65,35 @@ def book_a_court_at_certain_date(browser, date):
 
     next_day_button = browser.find_element(By.XPATH,"//button[@title='Next']")
     cur_date = browser.find_element(By.XPATH,"//span[@class='k-sm-date-format']").get_attribute("innerText")
-    import pdb
-    pdb.set_trace()
     while date != cur_date:
         cur_date = browser.find_element(By.XPATH,"//span[@class='k-sm-date-format']").get_attribute("innerText")
         next_day_button.click()
     
     sleep(1)
     # find time slot
-    reserve_6to7 = browser.find_elements(By.XPATH,'//button[(contains(@start, "18:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
-    reserve_7to8 = browser.find_elements(By.XPATH,'//button[(contains(@start, "19:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
-    reserve_8to9 = browser.find_elements(By.XPATH,'//button[(contains(@start, "20:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
+    #reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "18:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
+    #reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "19:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
+    reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "12:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
 
-    if len(reserve_6to7) == 0 and len(reserve_7to8)==0 and len(reserve_8to9)==0:
+    if len(reserve)==0:
         print("No availiability")
         return
 
-    if len(reserve_8to9) > 0:
-        reserve_8to9.click()
+    if len(reserve) > 0:
+        Court_Label = ["Court 1", "Court 2", "Court 3", "Court 4"]
+        available_courts = []
+        for available_slot in reserve:
+            court_label = available_slot.get_attribute("courtlabel")
+            available_courts.append(court_label)
+        
+        # reserve court
+        reserve[0].click()
+        sleep(1)
+        extra_player = browser.find_element(By.XPATH, '//input[@name="OwnersDropdown_input"]')
+        extra_player.send_keys(SECOND_PLAYER)
+        save_button = browser.find_element(By.XPATH, '//button[text()="Save"]')
+
+        #save_button.click()
 
 
 def format_date(target_date):
@@ -121,8 +116,6 @@ def main():
     sleep(0.5)
     #book_a_court(browser)
     book_a_court_at_certain_date(browser, target_date_in_format)
-
-    
 
 if __name__ == '__main__':
     main()
