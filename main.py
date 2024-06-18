@@ -1,9 +1,8 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from datetime import date, timedelta
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
+import logging
+import sys
 from time import sleep
 
 ## Update USERNAME and PASSWORD to login
@@ -11,14 +10,14 @@ USERNAME = "*********"
 PASSWORD = "*********"
 SECOND_PLAYER = "NAN CHEN"
 
-TIMESLOT = "16:00:00"
+TIMESLOT = "20:00:00"
 # priority for [court1, court2, court3, court4]
 # 0 is highest priority
 PRIORITY = [3, 2, 1, 0]
 
 # Not in use, TBD
 # priority for [6to7, 7to8, 8to9] sessions
-PRIORITY = [2, 0, 1]
+PRIORITY_TIMESLOT = [2, 0, 1]
 
 
 COURT_RESERVE_PAGE = "https://app.courtreserve.com/Online/Account/Login"
@@ -33,7 +32,7 @@ def login(browser):
     login.click()
 
 # not in use, this is for getting any available slot
-def book_a_court(browser):
+def book_a_court(browser, logger):
     browser.maximize_window()
     #lnks=browser.find_elements(By.XPATH, "(//a[contains(@href,'/Reservations/Bookings')])")
 
@@ -57,11 +56,11 @@ def book_a_court(browser):
         found_date = True
 
     if found_date:
-        print("Date Found ", cur_date)
+        logger.info("Date Found ", cur_date)
     else:
-        print("No Availiability")
+        logger.info("No Availiability")
 
-def book_a_court_at_certain_date(browser, date):
+def book_a_court_at_certain_date(browser, date, logger):
     browser.maximize_window()
     #lnks=browser.find_elements(By.XPATH, "(//a[contains(@href,'/Reservations/Bookings')])")
 
@@ -73,14 +72,14 @@ def book_a_court_at_certain_date(browser, date):
         cur_date = browser.find_element(By.XPATH,"//span[@class='k-sm-date-format']").get_attribute("innerText")
         next_day_button.click()
     
-    sleep(1)
+    sleep(1.5)
     # find time slot
     #reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "18:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
     #reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "19:00:00 GMT-0400")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]')
     reserve = browser.find_elements(By.XPATH,'//button[(contains(@start, "%s")) and (@class="btn btn-default btn-expanded-slot slot-btn m-auto")]'%str(TIMESLOT))
 
     if len(reserve)==0:
-        print("No availiability")
+        logger.info("No availiability")
         return
 
     if len(reserve) > 0:
@@ -108,9 +107,9 @@ def book_a_court_at_certain_date(browser, date):
             extra_player = browser.find_element(By.XPATH, '//input[@name="OwnersDropdown_input"]')
             extra_player.send_keys(SECOND_PLAYER)
             save_button = browser.find_element(By.XPATH, '//button[text()="Save"]')
-            #save_button.click()
+            save_button.click()
             booked = True
-            print("Booked Timeslot at " + reserve[court_number].get_attribute("start") + " on "+ reserve[court_number].get_attribute("courtlabel"))
+            logger.info("Booked Timeslot at " + reserve[court_number].get_attribute("start") + " on "+ reserve[court_number].get_attribute("courtlabel"))
             i+=1
 
 
@@ -124,6 +123,20 @@ def format_date(target_date):
     return date_in_format
 
 def main():
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.DEBUG)
+    stdout_handler.setFormatter(formatter)
+    
+    file_handler = logging.FileHandler('./logs.log')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    
+    logger.addHandler(file_handler)
+    logger.addHandler(stdout_handler)
+
     today = date.today()
     target_date = today + timedelta(days=7)
     target_date_in_format = format_date(target_date)
@@ -132,8 +145,8 @@ def main():
 
     login(browser)
     sleep(0.5)
-    #book_a_court(browser)
-    book_a_court_at_certain_date(browser, target_date_in_format)
+    #book_a_court(browser, logger)
+    book_a_court_at_certain_date(browser, target_date_in_format, logger)
 
 if __name__ == '__main__':
     main()
